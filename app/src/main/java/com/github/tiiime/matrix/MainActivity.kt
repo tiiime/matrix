@@ -10,8 +10,16 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import com.github.tiiime.matrix.ktx.get
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlin.math.max
+import kotlin.math.min
 
 class MainActivity : AppCompatActivity() {
+    companion object {
+        private const val MAX_SCALE = 2F
+        private const val MIN_SCALE = 1F
+
+    }
+
     val scaleListener = object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         private var lastScaleEndScale = 1F
 
@@ -30,6 +38,7 @@ class MainActivity : AppCompatActivity() {
                 detector.focusX,
                 detector.focusY
             )
+            limitMatrixScale(matrixView.circleMatrix, detector.focusX, detector.focusY)
             ViewCompat.postInvalidateOnAnimation(matrixView)
             return super.onScale(detector)
         }
@@ -51,6 +60,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
     val scrollDetector by lazy { GestureDetector(this, scrollListener) }
+
+    private fun limitMatrixScale(matrix: Matrix, privoX: Float, privoY: Float) {
+        val scale = matrix[Matrix.MSCALE_X]
+
+        val targetScale = min(max(MIN_SCALE, scale), MAX_SCALE) / scale
+        matrix.postScale(targetScale, targetScale, privoX, privoY)
+    }
 
     private fun limitMatrixTranslate(matrix: Matrix) {
 
