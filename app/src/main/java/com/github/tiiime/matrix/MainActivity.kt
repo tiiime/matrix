@@ -1,6 +1,7 @@
 package com.github.tiiime.matrix
 
 import android.graphics.Matrix
+import android.graphics.RectF
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -44,11 +45,64 @@ class MainActivity : AppCompatActivity() {
             distanceY: Float
         ): Boolean {
             matrixView.circleMatrix.postTranslate(-distanceX, -distanceY)
+            limitMatrixTranslate(matrixView.circleMatrix)
             ViewCompat.postInvalidateOnAnimation(matrixView)
             return super.onScroll(e1, e2, distanceX, distanceY)
         }
     }
     val scrollDetector by lazy { GestureDetector(this, scrollListener) }
+
+    private fun limitMatrixTranslate(matrix: Matrix) {
+
+        val rect = RectF(0F, 0F, matrixView.width.toFloat(), matrixView.height.toFloat())
+        val rectBound = RectF(0F, 0F, matrixView.width.toFloat(), matrixView.height.toFloat())
+        matrix.mapRect(rect)
+
+        val offsetX =
+            getOffset(rect.left, rect.right, rectBound.left, rectBound.right, rectBound.centerX())
+        val offsetY =
+            getOffset(rect.top, rect.bottom, rectBound.top, rectBound.bottom, rectBound.centerY())
+
+        if (offsetX != 0F || offsetY != 0F) {
+            matrix.postTranslate(offsetX, offsetY)
+        }
+    }
+
+    /**
+     * copy from
+     * https://github.com/facebook/fresco/blob/23a0d0f66f75a21aa76817c1c2170fe25ce8bed9/samples/zoomable/src/main/java/com/facebook/samples/zoomable/DefaultZoomableController.java#L507
+     */
+    private fun getOffset(
+        matrixStart: Float,
+        matrixEnd: Float,
+        limitStart: Float,
+        limitEnd: Float,
+        limitCenter: Float
+    ): Float {
+        val imageWidth = matrixEnd - matrixStart
+        val limitWidth = limitEnd - limitStart
+        val limitInnerWidth = (limitCenter - limitStart).coerceAtMost(limitEnd - limitCenter) * 2;
+        // center if smaller than limitInnerWidth
+        if (imageWidth < limitInnerWidth) {
+            return limitCenter - (matrixEnd + matrixStart) / 2;
+        }
+        // to the edge if in between and limitCenter is not (limitLeft + limitRight) / 2
+        if (imageWidth < limitWidth) {
+            return if (limitCenter < (limitStart + limitEnd) / 2) {
+                limitStart - matrixStart;
+            } else {
+                limitEnd - matrixEnd;
+            }
+        }
+        // to the edge if larger than limitWidth and empty space visible
+        if (matrixStart > limitStart) {
+            return limitStart - matrixStart;
+        }
+        if (matrixEnd < limitEnd) {
+            return limitEnd - matrixEnd;
+        }
+        return 0F
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
