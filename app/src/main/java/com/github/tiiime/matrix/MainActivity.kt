@@ -9,6 +9,7 @@ import android.view.ScaleGestureDetector
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import com.github.tiiime.matrix.ktx.get
+import com.github.tiiime.matrix.util.MatrixScaleGestureDetector
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlin.math.max
 import kotlin.math.min
@@ -20,28 +21,12 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    val scaleListener = object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-        private var lastScaleEndScale = 1F
-
-        override fun onScaleEnd(detector: ScaleGestureDetector) {
-            super.onScaleEnd(detector)
-            lastScaleEndScale = matrixView.circleMatrix[Matrix.MSCALE_X]
-        }
-
-        override fun onScale(detector: ScaleGestureDetector): Boolean {
-            matrixView.updateScale(detector)
-            val currentScale = matrixView.circleMatrix[Matrix.MSCALE_X]
-            val targetScale = (lastScaleEndScale * detector.scaleFactor) / currentScale
-            matrixView.circleMatrix.postScale(
-                targetScale,
-                targetScale,
-                detector.focusX,
-                detector.focusY
-            )
-            limitMatrixScale(matrixView.circleMatrix, detector.focusX, detector.focusY)
-            ViewCompat.postInvalidateOnAnimation(matrixView)
-            return super.onScale(detector)
-        }
+    val scaleListener by lazy {
+        MatrixScaleGestureDetector(
+            matrixView.circleMatrix,
+            MIN_SCALE,
+            MAX_SCALE
+        ) { ViewCompat.postInvalidateOnAnimation(matrixView) }
     }
 
     val detector by lazy { ScaleGestureDetector(this, scaleListener) }
@@ -61,12 +46,6 @@ class MainActivity : AppCompatActivity() {
     }
     val scrollDetector by lazy { GestureDetector(this, scrollListener) }
 
-    private fun limitMatrixScale(matrix: Matrix, privoX: Float, privoY: Float) {
-        val scale = matrix[Matrix.MSCALE_X]
-
-        val targetScale = min(max(MIN_SCALE, scale), MAX_SCALE) / scale
-        matrix.postScale(targetScale, targetScale, privoX, privoY)
-    }
 
     private fun limitMatrixTranslate(matrix: Matrix) {
 
