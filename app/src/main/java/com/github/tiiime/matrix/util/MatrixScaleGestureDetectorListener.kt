@@ -6,7 +6,7 @@ import com.github.tiiime.matrix.ktx.get
 import kotlin.math.max
 import kotlin.math.min
 
-class MatrixScaleGestureDetector(
+class MatrixScaleGestureDetectorListener(
     private val matrix: Matrix,
     private val minScale: Float,
     private val maxScale: Float,

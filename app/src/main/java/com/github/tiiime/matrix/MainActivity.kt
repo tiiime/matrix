@@ -1,18 +1,14 @@
 package com.github.tiiime.matrix
 
-import android.graphics.Matrix
 import android.graphics.RectF
 import android.os.Bundle
 import android.view.GestureDetector
-import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
-import com.github.tiiime.matrix.ktx.get
-import com.github.tiiime.matrix.util.MatrixScaleGestureDetector
+import com.github.tiiime.matrix.util.MatrixScaleGestureDetectorListener
+import com.github.tiiime.matrix.util.MatrixScrollGestureDetectorListener
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlin.math.max
-import kotlin.math.min
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -21,83 +17,24 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    val scaleListener by lazy {
-        MatrixScaleGestureDetector(
-            matrixView.circleMatrix,
-            MIN_SCALE,
-            MAX_SCALE
-        ) { ViewCompat.postInvalidateOnAnimation(matrixView) }
+    private val scaleDetector by lazy {
+        ScaleGestureDetector(this,
+            MatrixScaleGestureDetectorListener(
+                matrixView.circleMatrix,
+                MIN_SCALE,
+                MAX_SCALE
+            ) { ViewCompat.postInvalidateOnAnimation(matrixView) }
+        )
     }
 
-    val detector by lazy { ScaleGestureDetector(this, scaleListener) }
-
-    val scrollListener = object : GestureDetector.SimpleOnGestureListener() {
-        override fun onScroll(
-            e1: MotionEvent?,
-            e2: MotionEvent?,
-            distanceX: Float,
-            distanceY: Float
-        ): Boolean {
-            matrixView.circleMatrix.postTranslate(-distanceX, -distanceY)
-            limitMatrixTranslate(matrixView.circleMatrix)
-            ViewCompat.postInvalidateOnAnimation(matrixView)
-            return super.onScroll(e1, e2, distanceX, distanceY)
-        }
-    }
-    val scrollDetector by lazy { GestureDetector(this, scrollListener) }
-
-
-    private fun limitMatrixTranslate(matrix: Matrix) {
-
-        val rect = RectF(0F, 0F, matrixView.width.toFloat(), matrixView.height.toFloat())
-        val rectBound = RectF(0F, 0F, matrixView.width.toFloat(), matrixView.height.toFloat())
-        matrix.mapRect(rect)
-
-        val offsetX =
-            getOffset(rect.left, rect.right, rectBound.left, rectBound.right, rectBound.centerX())
-        val offsetY =
-            getOffset(rect.top, rect.bottom, rectBound.top, rectBound.bottom, rectBound.centerY())
-
-        if (offsetX != 0F || offsetY != 0F) {
-            matrix.postTranslate(offsetX, offsetY)
-        }
+    private val scrollDetector by lazy {
+        GestureDetector(this, MatrixScrollGestureDetectorListener(
+            matrix = matrixView.circleMatrix,
+            limitRectF = RectF(0F, 0F, matrixView.width.toFloat(), matrixView.height.toFloat()),
+            matrixUpdate = { ViewCompat.postInvalidateOnAnimation(matrixView) }
+        ))
     }
 
-    /**
-     * copy from
-     * https://github.com/facebook/fresco/blob/23a0d0f66f75a21aa76817c1c2170fe25ce8bed9/samples/zoomable/src/main/java/com/facebook/samples/zoomable/DefaultZoomableController.java#L507
-     */
-    private fun getOffset(
-        matrixStart: Float,
-        matrixEnd: Float,
-        limitStart: Float,
-        limitEnd: Float,
-        limitCenter: Float
-    ): Float {
-        val imageWidth = matrixEnd - matrixStart
-        val limitWidth = limitEnd - limitStart
-        val limitInnerWidth = (limitCenter - limitStart).coerceAtMost(limitEnd - limitCenter) * 2;
-        // center if smaller than limitInnerWidth
-        if (imageWidth < limitInnerWidth) {
-            return limitCenter - (matrixEnd + matrixStart) / 2;
-        }
-        // to the edge if in between and limitCenter is not (limitLeft + limitRight) / 2
-        if (imageWidth < limitWidth) {
-            return if (limitCenter < (limitStart + limitEnd) / 2) {
-                limitStart - matrixStart;
-            } else {
-                limitEnd - matrixEnd;
-            }
-        }
-        // to the edge if larger than limitWidth and empty space visible
-        if (matrixStart > limitStart) {
-            return limitStart - matrixStart;
-        }
-        if (matrixEnd < limitEnd) {
-            return limitEnd - matrixEnd;
-        }
-        return 0F
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -118,7 +55,7 @@ class MainActivity : AppCompatActivity() {
 
         matrixView.setOnTouchListener { v, event ->
             scrollDetector.onTouchEvent(event)
-            detector.onTouchEvent(event)
+            scaleDetector.onTouchEvent(event)
         }
     }
 
