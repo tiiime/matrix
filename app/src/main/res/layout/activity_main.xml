@@ -8,9 +8,21 @@
 
     <com.github.tiiime.matrix.widget.MatrixView
         android:id="@+id/matrixView"
+        android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <com.github.tiiime.matrix.widget.MatrixLayout
+        android:id="@+id/matrix_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+    </com.github.tiiime.matrix.widget.MatrixLayout>
 
     <Button
         android:id="@+id/button"

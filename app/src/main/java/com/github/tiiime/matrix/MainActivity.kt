@@ -1,11 +1,15 @@
 package com.github.tiiime.matrix
 
+import android.content.Context
+import android.graphics.Matrix
 import android.graphics.RectF
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.ScaleGestureDetector
+import android.view.ViewGroup
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
+import androidx.recyclerview.widget.*
 import com.github.tiiime.matrix.util.MatrixScaleGestureDetectorListener
 import com.github.tiiime.matrix.util.MatrixScrollGestureDetectorListener
 import kotlinx.android.synthetic.main.activity_main.*
@@ -17,22 +21,33 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    private val dragPinchMatrix = Matrix()
+
     private val scaleDetector by lazy {
-        ScaleGestureDetector(this,
+        ScaleGestureDetector(
+            this,
             MatrixScaleGestureDetectorListener(
-                matrixView.circleMatrix,
+                dragPinchMatrix,
                 MIN_SCALE,
-                MAX_SCALE
-            ) { ViewCompat.postInvalidateOnAnimation(matrixView) }
+                MAX_SCALE,
+                matrixUpdate = matrix_layout::updateMatrix
+            )
         )
     }
 
     private val scrollDetector by lazy {
-        GestureDetector(this, MatrixScrollGestureDetectorListener(
-            matrix = matrixView.circleMatrix,
-            limitRectF = RectF(0F, 0F, matrixView.width.toFloat(), matrixView.height.toFloat()),
-            matrixUpdate = { ViewCompat.postInvalidateOnAnimation(matrixView) }
-        ))
+        GestureDetector(
+            this, MatrixScrollGestureDetectorListener(
+                matrix = dragPinchMatrix,
+                limitRectF = RectF(
+                    0F,
+                    0F,
+                    matrix_layout.width.toFloat(),
+                    matrix_layout.height.toFloat()
+                ),
+                matrixUpdate = matrix_layout::updateMatrix
+            )
+        )
     }
 
 
@@ -40,24 +55,42 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        matrixView.circleMatrix
+//        val list = initOperateList()
+//        var current = list.first()
 
-        val list = initOperateList()
-        var current = list.first()
+//        button.text = current.name
+//        button.setOnClickListener {
+//            current.run.run()
+//            current = current.next!!
+//            button.text = current.name
+//            ViewCompat.postInvalidateOnAnimation(matrixView)
+//        }
 
-        button.text = current.name
-        button.setOnClickListener {
-            current.run.run()
-            current = current.next!!
-            button.text = current.name
-            ViewCompat.postInvalidateOnAnimation(matrixView)
+//        matrixView.setOnTouchListener { v, event ->
+//            scrollDetector.onTouchEvent(event)
+//            scaleDetector.onTouchEvent(event)
+//        }
+
+        list.layoutManager = LinearLayoutManager(this)
+        list.adapter = object : RecyclerView.Adapter<TextHolder>() {
+            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TextHolder =
+                TextHolder(this@MainActivity)
+
+            override fun getItemCount(): Int = 100
+
+            override fun onBindViewHolder(holder: TextHolder, position: Int) {
+                (holder.itemView as TextView).text = "$position"
+            }
         }
 
-        matrixView.setOnTouchListener { v, event ->
+        list.setOnTouchListener { v, event ->
             scrollDetector.onTouchEvent(event)
             scaleDetector.onTouchEvent(event)
+            return@setOnTouchListener false
         }
     }
+
+    class TextHolder(context: Context) : RecyclerView.ViewHolder(TextView(context))
 
     private fun initOperateList(): List<Action> {
         val postScale = Action("postScale", Runnable {
